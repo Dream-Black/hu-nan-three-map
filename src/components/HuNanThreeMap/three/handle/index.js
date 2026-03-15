@@ -1,0 +1,1 @@
+export { applyGradientToBorder } from './applyGradientToBorder';

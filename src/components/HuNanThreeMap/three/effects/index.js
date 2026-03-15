@@ -1,0 +1,1 @@
+export { createGradientMaterial } from './GradientMaterial';
