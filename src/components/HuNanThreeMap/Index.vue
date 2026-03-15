@@ -3,7 +3,6 @@
     <!-- 进度条 UI -->
     <div v-if="loading" class="progress-overlay">
       <div class="progress-container">
-        <!-- 根据是否知道总大小选择不同样式 -->
         <div class="progress-bar determinate" :style="{ width: progressPercent }"></div>
         <span class="progress-text">{{ progressText }}</span>
       </div>
@@ -15,15 +14,29 @@
 </template>
 
 <script>
-import { ThreeManager, ModelLoader } from './three'
+import { ThreeManager, ModelLoader } from './three';
 
 export default {
   name: 'HuNanThreeMap',
   props: {
     modelUrl: {
       type: String,
-      default: '/threeModel/hunan.glb'
-    }
+      default: '/threeModel/hunan.glb',
+    },
+    markers: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  watch: {
+    markers: {
+      handler(newMarkers) {
+        if (this.manager) {
+          this.manager.setMarkers(newMarkers);
+        }
+      },
+      deep: true,
+    },
   },
   data() {
     return {
@@ -31,36 +44,41 @@ export default {
       progressPercent: '0%',
       progressText: '',
       error: null,
-      loading: true, 
-    }
+      loading: true,
+    };
   },
   mounted() {
-    const modelLoader = new ModelLoader()
-    this.manager = new ThreeManager(this.$refs.container, modelLoader)
+    const modelLoader = new ModelLoader();
+    this.manager = new ThreeManager(this.$refs.container, modelLoader);
+
+    if (this.markers) {
+      this.manager.setMarkers(this.markers);
+    }
 
     this.manager.loadModel(this.modelUrl, (xhr) => {
-      this.progressPercent = `${(xhr.loaded / 20938320 * 100).toFixed(0)}%`
-      this.progressText = `已加载: ${this.progressPercent}`
+      // console.log(xhr.loaded)
+      this.progressPercent = `${((xhr.loaded / 20332800) * 100).toFixed(0)}%`;
+      this.progressText = `已加载: ${this.progressPercent}`;
       if (this.progressPercent === '100%') {
-        this.loading = false
+        this.loading = false;
       }
-    })
+    });
 
-    window.addEventListener('resize', this.handleResize)
+    window.addEventListener('resize', this.handleResize);
   },
   beforeDestroy() {
-    window.removeEventListener('resize', this.handleResize)
+    window.removeEventListener('resize', this.handleResize);
     if (this.manager) {
-      this.manager.dispose()
-      this.manager = null
+      this.manager.dispose();
+      this.manager = null;
     }
   },
   methods: {
     handleResize() {
-      this.manager?.resize()
-    }
-  }
-}
+      this.manager?.resize();
+    },
+  },
+};
 </script>
 
 <style>
@@ -81,7 +99,7 @@ export default {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  pointer-events: none; /* 允许点击穿透到 canvas（如果 canvas 需要交互） */
+  pointer-events: none;
 }
 
 .progress-container {
@@ -89,12 +107,11 @@ export default {
   background-color: #333;
   border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   position: relative;
   text-align: center;
 }
 
-/* 确定进度条 */
 .progress-bar.determinate {
   height: 20px;
   background: linear-gradient(90deg, #4caf50, #8bc34a);
@@ -102,8 +119,12 @@ export default {
 }
 
 @keyframes flow {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .progress-text {

@@ -28,7 +28,6 @@ export function applyGradientToBorder(models){
     return
   }
   
-  console.log(minY, maxY)
   const material = createGradientMaterial(minY, maxY)
   if (borderMeshes.material) {
     if (Array.isArray(borderMeshes.material)) {

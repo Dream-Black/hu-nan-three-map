@@ -1,6 +1,8 @@
 <template>
   <div id="app">
-    <HuNanThreeMap></HuNanThreeMap>
+    <HuNanThreeMap
+      :markers="markersData"
+    ></HuNanThreeMap>
   </div>
 </template>
 
@@ -11,7 +13,15 @@ export default {
   name: 'App',
   components: {
     HuNanThreeMap
-  }
+  },
+  data() {
+    return {
+      markersData: [
+        { position: { x: 1, y: 1, z: 2 }, html: '<span>铁塔A</span>' },
+        { position: { x: -2, y: 1, z: -1 }, html: '<div style="color:yellow;">铁塔B</div>' },
+      ],
+    };
+  },
 }
 </script>
 
