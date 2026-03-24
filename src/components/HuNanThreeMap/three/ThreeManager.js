@@ -1,11 +1,17 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+
 import * as Handle from './handle';
 import { createGround, createShadowGround } from './Ground';
 import { GlowPath } from './effects';
 import { MarkerManager } from './markers/MarkerManager';
-import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { CityManager } from './city'
+import { CityManager } from './city';
+import { ClickManager } from './event/click';
 
 export default class ThreeManager {
   constructor(container, modelLoader) {
@@ -22,21 +28,30 @@ export default class ThreeManager {
     this.cityManager = null;
   }
 
-  async init(){
+  async init() {
     this.initScene();
     this.initCamera();
     this.initRenderer();
     this.initLights();
     this.initControls();
+    this.initClickManager();
     // this.initGround();
     await this.initMarkerManager();
     await this.initCity();
     this.animate();
   }
 
+  initClickManager() {
+    this.clickManager = new ClickManager(this.camera, this.controls, this.container, this.outlinePass);
+  }
+
   async initCity() {
     this.cityManager = new CityManager(this.scene);
     await this.cityManager.init();
+
+    this.clickManager.setObjects(this.cityManager.cities.map(item => {
+      return item.mesh
+    }))
   }
 
   initGlowPath() {
@@ -105,6 +120,10 @@ export default class ThreeManager {
     this.controls.screenSpacePanning = true;
     this.controls.maxPolarAngle = Math.PI / 2.5;
     this.controls.target.set(0, 0, 0);
+
+    this.controls.enableZoom = false; // 禁止缩放
+    this.controls.enablePan = false; // 禁止平移
+    this.controls.enableRotate = false; // 禁止旋转
   }
 
   initRenderer() {
@@ -122,8 +141,29 @@ export default class ThreeManager {
     this.labelRenderer.domElement.style.position = 'absolute';
     this.labelRenderer.domElement.style.top = '0px';
     this.labelRenderer.domElement.style.left = '0px';
-    this.labelRenderer.domElement.style.pointerEvents = 'none'; // 允许点击穿透到canvas
+    this.labelRenderer.domElement.style.pointerEvents = 'none';
     this.container.appendChild(this.labelRenderer.domElement);
+    
+    // 后处理
+    this.composer = new EffectComposer(this.renderer);
+    const renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(renderPass);
+
+    // 初始化轮廓线
+    this.outlinePass = new OutlinePass(
+        new THREE.Vector2(this.container.clientWidth, this.container.clientHeight),
+        this.scene,
+        this.camera
+    );
+    // 轮廓线样式
+    this.outlinePass.edgeStrength = 5.0; 
+    this.outlinePass.edgeGlow = 1.0;     
+    this.outlinePass.edgeThickness = 2.0;
+    this.outlinePass.visibleEdgeColor.set('#ffffff');
+    this.composer.addPass(this.outlinePass);
+
+    const outputPass = new OutputPass();
+    this.composer.addPass(outputPass);
   }
 
   setMarkers(markersData) {
@@ -184,12 +224,16 @@ export default class ThreeManager {
 
   animate() {
     requestAnimationFrame(() => this.animate());
-
+    if (this.clickManager) this.clickManager.update();
     if (this.controls) this.controls.update();
     if (this.glowPath) this.glowPath.update();
-
-    if( this.renderer) this.renderer.render(this.scene, this.camera);
-    if(this.labelRenderer) this.labelRenderer.render(this.scene, this.camera);
+    
+    if (this.composer) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
+    if (this.labelRenderer) this.labelRenderer.render(this.scene, this.camera);
   }
 
   resize() {
@@ -198,6 +242,12 @@ export default class ThreeManager {
 
     this.renderer.setSize(width, height);
     this.labelRenderer.setSize(width, height);
+    
+    // 必须更新 composer
+    if (this.composer) {
+      this.composer.setSize(width, height);
+    }
+
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }
@@ -206,6 +256,11 @@ export default class ThreeManager {
     this.renderer.dispose();
     if (this.renderer.domElement && this.renderer.domElement.parentNode) {
       this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+    }
+
+    if (this.clickManager) {
+      this.clickManager.dispose();
+      this.clickManager = null;
     }
 
     if (this.markerManager) {

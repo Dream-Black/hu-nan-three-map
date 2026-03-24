@@ -127,6 +127,7 @@ export class CityManager {
 
     // 创建网格
     const mesh = new THREE.Mesh(geometry, this.sharedMaterial);
+    mesh.name = text;
 
     // 设置位置（居中处理）
     geometry.computeBoundingBox();
