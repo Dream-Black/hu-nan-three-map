@@ -17,11 +17,18 @@ export default {
   data() {
     return {
       markersData: [
-        { position: { x: 1, y: 1, z: 2 }, html: '<span>铁塔A</span>' },
-        { position: { x: -2, y: 1, z: -1 }, html: '<div style="color:yellow;">铁塔B</div>' },
+        { position: { x: 1, y: 0, z: 2 }, html: '<span>铁塔A</span>', type: '信号塔' },
+        { position: { x: -2, y: 0, z: -1 }, html: '<div style="color:yellow;">铁塔B</div>', type: '信号塔' },
+        { position: { x: 1, y: 2, z: -3 }, html: '<div>卫星A</div>', type: '卫星' },
+        { position: { x: -4, y: 1.5, z: 1 }, html: '', type: '无人机' },
       ],
     };
   },
+  mounted(){
+    setTimeout(() => {
+      this.markersData[1].html = '<div style="color:orange;">铁塔B</div>'
+    }, 5 * 1000)
+  }
 }
 </script>
 

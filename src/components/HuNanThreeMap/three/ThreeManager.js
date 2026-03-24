@@ -18,14 +18,16 @@ export default class ThreeManager {
     this.shadowGround = null;
     this.pathMesh = null;
     this.glowPath = null;
+  }
 
+  async init(){
     this.initScene();
     this.initCamera();
     this.initRenderer();
     this.initLights();
     this.initControls();
     // this.initGround();
-    this.initMarkerManager();
+    await this.initMarkerManager();
     this.animate();
   }
 
@@ -120,8 +122,9 @@ export default class ThreeManager {
     this.markerManager.setMarkers(markersData);
   }
 
-  initMarkerManager() {
+  async initMarkerManager() {
     this.markerManager = new MarkerManager(this.scene, this.labelRenderer);
+    await this.markerManager.loadTextures();
   }
 
   initLights() {
@@ -197,7 +200,7 @@ export default class ThreeManager {
     }
 
     if (this.markerManager) {
-      this.markerManager.clear();
+      this.markerManager.dispose();
       this.markerManager = null;
     }
     if (this.labelRenderer) {

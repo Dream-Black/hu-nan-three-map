@@ -48,9 +48,10 @@ export default {
       loading: true,
     };
   },
-  mounted() {
+  async mounted() {
     const modelLoader = new ModelLoader();
     this.manager = new ThreeManager(this.$refs.container, modelLoader);
+    await this.manager.init()
 
     if (this.markers) {
       this.manager.setMarkers(this.markers);

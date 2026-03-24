@@ -6,32 +6,73 @@ export class MarkerManager {
     this.scene = scene;
     this.labelRenderer = labelRenderer;
     this.markers = [];
+    this.textureMap = {
+      '信号塔': null,
+      '无人机': null,
+      '卫星': null
+    };
+  }
+
+  /**
+   * 加载精灵纹理
+   */
+  loadTextures() {
+    const fns = [];
+    ['信号塔', '无人机', '卫星'].forEach((item) => {
+    const loader = new THREE.TextureLoader();
+    const promise = new Promise((resolve, reject) => {
+        loader.load( `./img/${item}.png`, texture => {
+            this.textureMap[item] = texture;
+            resolve(texture);
+          },
+          undefined,
+          error => reject(error)
+        );
+      });
+      fns.push(promise);
+    });
+    return Promise.all(fns)
   }
 
   /**
    * 设置所有标注点
-   * @param {Array} markersData - [{ position: {x,y,z}, html: string }]
+   * @param {Array} markersData
    */
   setMarkers(markersData) {
-    // 清除旧标注
-    this.clear();
-
+    this.clear()
     markersData.forEach(data => {
       const marker = new Marker(
         new THREE.Vector3(data.position.x, data.position.y, data.position.z),
-        data.html
+        data.html,
+        {
+          type: data.type,
+        },
+        this.textureMap[data.type]
       );
       this.markers.push(marker);
-      this.scene.add(marker);
+      this.scene.add(marker.getObject());
     });
   }
 
   clear() {
     this.markers.forEach(marker => {
       marker.dispose();
-      this.scene.remove(marker);
+      const group = marker.getObject();
+      this.scene.remove(group);
     });
     this.markers = [];
+  }
+
+  dispose() {
+    this.clear();
+    for(const key in this.textureMap){
+      this.textureMap[key]?.dispose && this.textureMap[key].dispose();
+    }
+    this.textureMap = {
+      '信号塔': null,
+      '无人机': null,
+      '卫星': null
+    }
   }
 
   update() {
