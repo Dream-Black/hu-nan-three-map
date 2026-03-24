@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-// 修改导入方式，直接引入需要的类
 import { Group, Tween, Easing } from '@tweenjs/tween.js';
 
 export class ClickManager {
-  constructor(camera, controls, container, outlinePass, vue) {
+  constructor(camera, controls, container, outlinePass, vue, overlay) {
     this.camera = camera;
     this.controls = controls;
     this.container = container;
     this.outlinePass = outlinePass;
     this.vue = vue;
+    this.overlay = overlay;
 
     this.tweenGroup = new Group();
 
@@ -71,110 +71,135 @@ export class ClickManager {
   }
 
   onPointerMove(event) {
-  const rect = this.container.getBoundingClientRect();
-  this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    const rect = this.container.getBoundingClientRect();
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-  this.raycaster.setFromCamera(this.mouse, this.camera);
-  const intersects = this.raycaster.intersectObjects(this.interactiveObjects, true);
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.interactiveObjects, true);
 
-  if (intersects.length > 0) {
-    const target = intersects[0].object;
+    if (intersects.length > 0) {
+      const target = intersects[0].object;
 
-    // 如果当前选中的物体没变，直接跳过，防止重复触发 Tween
-    if (this.hoveredObject === target) return;
+      if (this.hoveredObject === target) return;
 
-    // 1. 先重置之前的状态
-    this.resetCurrentHover();
-
-    // 2. 记录新状态
-    this.hoveredObject = target;
-    this.container.style.cursor = 'pointer';
-
-    // --- 分类处理交互逻辑 ---
-    if (target.isSprite) {
-      // 方案：Sprite 呼吸缩放 + 亮度增强
-      this.handleSpriteHover(target, true);
-      this.vue.$emit('moveInto', { type: 'marker', name: target.name });
-    } else {
-      // 方案：Mesh 轮廓线
-      if (this.outlinePass) this.outlinePass.selectedObjects = [target];
-      this.vue.$emit('moveInto', { type: 'city', name: target.name });
-    }
-    
-  } else {
-    // 3. 移出空白区域
-    if (this.hoveredObject) {
       this.resetCurrentHover();
+
+      this.hoveredObject = target;
+      this.container.style.cursor = 'pointer';
+
+      if (target.isSprite) {
+        // Sprite 缩放和亮度
+        this.handleSpriteHover(target, true);
+        this.vue.$emit('moveInto', { type: 'marker', name: target.name });
+      } else {
+        // Mesh 轮廓线
+        if (this.outlinePass) this.outlinePass.selectedObjects = [target];
+        this.vue.$emit('moveInto', { type: 'city', name: target.name });
+      }
+      
+    } else {
+      if (this.hoveredObject) {
+        this.resetCurrentHover();
+      }
     }
   }
-}
 
-/**
- * 专门处理 Sprite 的缩放和亮度
- */
-handleSpriteHover(sprite, isIn) {
-  // 1. 如果是第一次移入这个 Sprite，记录它的原始缩放
-  if (!this.spriteOriginalScales.has(sprite.uuid)) {
-    this.spriteOriginalScales.set(sprite.uuid, sprite.scale.clone());
-  }
+  /**
+   * 处理 Sprite 的缩放和亮度
+   */
+  handleSpriteHover(sprite, isIn) {
+    if (!this.spriteOriginalScales.has(sprite.uuid)) {
+      this.spriteOriginalScales.set(sprite.uuid, sprite.scale.clone());
+    }
 
-  const originalScale = this.spriteOriginalScales.get(sprite.uuid);
-  
-  // 2. 停止该物体上正在运行的动画，防止“抖动”
-  this.tweenGroup.removeAll(); 
+    const originalScale = this.spriteOriginalScales.get(sprite.uuid);
 
-  // 3. 计算目标值：移入则在原始基础上乘以 1.3，移出则回到原始值
-  const ratio = isIn ? 1.3 : 1.0;
-  const targetScale = {
-    x: originalScale.x * ratio,
-    y: originalScale.y * ratio,
-    z: originalScale.z
-  };
+    this.tweenGroup.removeAll(); 
 
-  const targetIntensity = isIn ? 2.0 : 1.0;
+    const ratio = isIn ? 1.3 : 1.0;
+    const targetScale = {
+      x: originalScale.x * ratio,
+      y: originalScale.y * ratio,
+      z: originalScale.z
+    };
 
-  // 执行缩放动画
-  new Tween(sprite.scale, this.tweenGroup)
-    .to(targetScale, 300)
-    .easing(Easing.Back.Out)
-    .start();
+    const targetIntensity = isIn ? 2.0 : 1.0;
 
-  // 执行亮度动画
-  if (sprite.material.color) {
-    new Tween(sprite.material.color, this.tweenGroup)
-      .to({ r: targetIntensity, g: targetIntensity, b: targetIntensity }, 300)
+    new Tween(sprite.scale, this.tweenGroup)
+      .to(targetScale, 300)
+      .easing(Easing.Back.Out)
       .start();
-  }
-}
 
-/**
- * 统一的重置逻辑
- */
-resetCurrentHover() {
-  if (!this.hoveredObject) return;
-
-  if (this.hoveredObject.isSprite) {
-    this.handleSpriteHover(this.hoveredObject, false);
-    this.vue.$emit('moveOut', { type: 'marker', name: this.hoveredObject.name });
-  } else {
-    if (this.outlinePass) this.outlinePass.selectedObjects = [];
-    this.vue.$emit('moveOut', { type: 'city', name: this.hoveredObject.name });
+    if (sprite.material.color) {
+      new Tween(sprite.material.color, this.tweenGroup)
+        .to({ r: targetIntensity, g: targetIntensity, b: targetIntensity }, 300)
+        .start();
+    }
   }
 
-  this.hoveredObject = null;
-  this.container.style.cursor = 'default';
-}
+  /**
+   * 统一的重置逻辑
+   */
+  resetCurrentHover() {
+    if (!this.hoveredObject) return;
+
+    if (this.hoveredObject.isSprite) {
+      this.handleSpriteHover(this.hoveredObject, false);
+      this.vue.$emit('moveOut', { type: 'marker', name: this.hoveredObject.name });
+    } else {
+      if (this.outlinePass) this.outlinePass.selectedObjects = [];
+      this.vue.$emit('moveOut', { type: 'city', name: this.hoveredObject.name });
+    }
+
+    this.hoveredObject = null;
+    this.container.style.cursor = 'default';
+  }
 
   onPointerClick() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersects = this.raycaster.intersectObjects(this.interactiveObjects, true);
 
     if (intersects.length > 0) {
-      this.focusOnObject(intersects[0].object);
+      const clickedObject = intersects[0].object;
+      if (clickedObject.isSprite) {
+        this.triggerRippleEffect(clickedObject);
+      } else {
+        this.focusOnObject(clickedObject);
+      }
     }
   }
 
+  /**
+   * 触发扩散波特效
+   * @param {*} sprite 
+   */
+  triggerRippleEffect(sprite) {
+    const worldPos = new THREE.Vector3();
+    sprite.getWorldPosition(worldPos);
+    console.log(this.overlay)
+    if (this.overlay) {
+        const localPos = worldPos.clone();
+        this.overlay.worldToLocal(localPos);
+
+        const mat = this.overlay.material;
+        
+        // --- 核心调试打印 ---
+        console.log('--- 触发特效 ---');
+        console.log('点击局部坐标 (uCenter):', localPos);
+        console.log('当前时间 (uTime):', mat.uniforms.uTime.value);
+        
+        mat.uniforms.uCenter.value.copy(localPos);
+        mat.uniforms.uStartTime.value = mat.uniforms.uTime.value;
+        
+        console.log('设置起始时间 (uStartTime):', mat.uniforms.uStartTime.value);
+    }
+}
+
+  /**
+   * 普通模型点击：移动视角
+   * @param {*} object 
+   */
   focusOnObject(object) {
     this.vue.$emit('click', {
       type: 'city',
@@ -209,8 +234,11 @@ resetCurrentHover() {
       .start();
   }
 
-  update() {
+  update(time) {
     this.tweenGroup.update();
+    if (this.overlay && this.overlay.material && this.overlay.material.uniforms) {
+      this.overlay.material.uniforms.uTime.value = time;
+    }
   }
 
   dispose() {

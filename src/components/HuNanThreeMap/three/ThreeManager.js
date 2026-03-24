@@ -8,10 +8,11 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 
 import * as Handle from './handle';
 import { createGround, createShadowGround } from './Ground';
-import { GlowPath } from './effects';
+import { GlowPath, groundOverlayMaterial } from './effects';
 import { MarkerManager } from './markers/MarkerManager';
 import { CityManager } from './city';
 import { ClickManager } from './event/click';
+
 
 export default class ThreeManager {
   constructor(container, modelLoader, vue) {
@@ -28,6 +29,7 @@ export default class ThreeManager {
     this.glowPath = null;
     this.cityManager = null;
     this.clickManager = null;
+    this.overlay = {};
   }
 
   async init() {
@@ -49,7 +51,8 @@ export default class ThreeManager {
       this.controls, 
       this.container, 
       this.outlinePass,
-      this.vue
+      this.vue,
+      this.overlay
     );
   }
 
@@ -235,6 +238,11 @@ export default class ThreeManager {
         if (mesh.name === 'border-top') {
           this.pathMesh = mesh;
         }
+
+        if (mesh.name === 'hunan') {
+          this.hunanGroundMesh = mesh;
+          this.initEffectOverlay()
+        }
       });
       model.rotateY(-Math.PI / 2);
 
@@ -244,11 +252,38 @@ export default class ThreeManager {
     });
   }
 
-  animate() {
-    requestAnimationFrame(() => this.animate());
-    if (this.clickManager) this.clickManager.update();
+  initEffectOverlay(){
+    if (!this.hunanGroundMesh) return;
+   const overlayGeo = this.hunanGroundMesh.geometry;
+
+    this.overlay = new THREE.Mesh(overlayGeo, groundOverlayMaterial);
+
+    this.hunanGroundMesh.add(this.overlay);
+
+    this.overlay.position.set(0, 0, 0);
+    this.overlay.rotation.set(0, 0, 0);
+    this.overlay.scale.set(1, 1, 1);
+    this.overlay.position.y += 0.02; 
+    this.overlay.matrixAutoUpdate = true;
+
+    if (this.clickManager) {
+      this.clickManager.overlay = this.overlay;
+    }
+  }
+
+  animate(time) {
+    requestAnimationFrame(time => this.animate(time));
+
+    const seconds = time / 1000;
+    if (this.clickManager) this.clickManager.update(seconds);
+    if (groundOverlayMaterial.uniforms.uTime) {
+      groundOverlayMaterial.uniforms.uTime.value = seconds;
+    }
+    
     if (this.controls) this.controls.update();
     if (this.glowPath) this.glowPath.update();
+    
+    
     
     if (this.composer) {
       this.composer.render();
@@ -278,6 +313,11 @@ export default class ThreeManager {
     this.renderer.dispose();
     if (this.renderer.domElement && this.renderer.domElement.parentNode) {
       this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+    }
+
+    if(this.overlay){
+      this.overlay.geometry.dispose()
+      this.overlay.material.dispose()
     }
 
     if (this.clickManager) {
