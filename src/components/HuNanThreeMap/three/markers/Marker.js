@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 const TextureScaleConfig = {
-  '信号塔': [4, 5, 1],
-  '无人机': [2, 1.5, 1],
-  '卫星': [4, 2.5, 1]
+  '信号塔': [0.8, 3.4, 1],
+  '无人机': [1.6, 1, 1],
+  '卫星': [3, 1.5, 1]
 }
 
 /**
@@ -22,6 +22,7 @@ export default class Marker {
       type: '信号塔',
       height: 5,
       labelOffsetY: 0,
+      name: ''
     }, options);
     this.texture = texture;
     this.label = null;
@@ -43,6 +44,7 @@ export default class Marker {
 
     sprite.scale.set(...TextureScaleConfig[this.options.type]);
     sprite.center.set(0.5, 0);
+    sprite.name = this.options.name
 
     this.group.add(sprite);
   }

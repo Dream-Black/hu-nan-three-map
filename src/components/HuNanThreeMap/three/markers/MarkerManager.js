@@ -46,6 +46,7 @@ export class MarkerManager {
         data.html,
         {
           type: data.type,
+          name: data.name
         },
         this.textureMap[data.type]
       );

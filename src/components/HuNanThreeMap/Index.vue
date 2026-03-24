@@ -50,7 +50,7 @@ export default {
   },
   async mounted() {
     const modelLoader = new ModelLoader();
-    this.manager = new ThreeManager(this.$refs.container, modelLoader);
+    this.manager = new ThreeManager(this.$refs.container, modelLoader, this);
     await this.manager.init()
 
     if (this.markers) {
@@ -82,6 +82,13 @@ export default {
     handleResize() {
       this.manager?.resize();
     },
+
+    /**
+     * 重置相机视角
+     */
+    resetView(){
+      this.manager.clickManager.resetView()
+    }
   },
 };
 </script>

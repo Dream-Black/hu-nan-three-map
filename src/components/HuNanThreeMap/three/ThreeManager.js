@@ -14,9 +14,10 @@ import { CityManager } from './city';
 import { ClickManager } from './event/click';
 
 export default class ThreeManager {
-  constructor(container, modelLoader) {
+  constructor(container, modelLoader, vue) {
     this.container = container;
     this.modelLoader = modelLoader;
+    this.vue = vue;
     this.scene = null;
     this.camera = null;
     this.renderer = null;
@@ -26,6 +27,7 @@ export default class ThreeManager {
     this.pathMesh = null;
     this.glowPath = null;
     this.cityManager = null;
+    this.clickManager = null;
   }
 
   async init() {
@@ -42,16 +44,35 @@ export default class ThreeManager {
   }
 
   initClickManager() {
-    this.clickManager = new ClickManager(this.camera, this.controls, this.container, this.outlinePass);
+    this.clickManager = new ClickManager(
+      this.camera, 
+      this.controls, 
+      this.container, 
+      this.outlinePass,
+      this.vue
+    );
+  }
+
+  /**
+   * 设置需要交互的模型
+   */
+  setClickObjects(){
+    const citys = this.cityManager.cities.map(item => {
+      return item.mesh
+    })
+    const markers = this.markerManager.markers.map(item => {
+      return item.getObject();
+    });
+    this.clickManager.setObjects([
+      ...citys,
+      ...markers
+    ])
   }
 
   async initCity() {
     this.cityManager = new CityManager(this.scene);
     await this.cityManager.init();
-
-    this.clickManager.setObjects(this.cityManager.cities.map(item => {
-      return item.mesh
-    }))
+    this.setClickObjects()
   }
 
   initGlowPath() {
@@ -168,6 +189,7 @@ export default class ThreeManager {
 
   setMarkers(markersData) {
     this.markerManager.setMarkers(markersData);
+    this.setClickObjects()
   }
 
   async initMarkerManager() {
