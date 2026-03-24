@@ -24,7 +24,7 @@ export default class ThreeManager {
     this.initRenderer();
     this.initLights();
     this.initControls();
-    this.initGround();
+    // this.initGround();
     this.initMarkerManager();
     this.animate();
   }
@@ -61,6 +61,9 @@ export default class ThreeManager {
     this.glowPath = new GlowPath(this.scene, sortedPoints, this.pathMesh);
   }
 
+  /**
+   * 创建地面(反射、阴影)
+   */
   initGround() {
     this.shadowGround = createShadowGround();
     this.scene.add(this.shadowGround);
@@ -76,7 +79,6 @@ export default class ThreeManager {
 
   initScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x1c1c23);
   }
 
   initCamera() {
@@ -96,7 +98,7 @@ export default class ThreeManager {
   }
 
   initRenderer() {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.container.appendChild(this.renderer.domElement);

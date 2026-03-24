@@ -13,7 +13,7 @@ export function createGradientMaterial(yMin, yMax){
       yMax: { value: yMax },
       colorTop: { value: new THREE.Color(0x13161A) },
       colorMiddle: { value: new THREE.Color(0x1A837F) },
-      colorBottom: { value: new THREE.Color(0x21FFED) },
+      colorBottom: { value: new THREE.Color(0x8DC4F2) },
     },
     vertexShader: `
       varying float vY;

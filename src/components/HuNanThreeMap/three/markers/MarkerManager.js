@@ -28,8 +28,8 @@ export class MarkerManager {
 
   clear() {
     this.markers.forEach(marker => {
-      this.scene.remove(marker);
       marker.dispose();
+      this.scene.remove(marker);
     });
     this.markers = [];
   }

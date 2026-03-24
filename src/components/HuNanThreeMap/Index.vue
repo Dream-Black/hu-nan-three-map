@@ -10,6 +10,7 @@
     <div v-if="error" class="error-overlay">
       <div class="error-message">加载失败: {{ error }}</div>
     </div>
+    <img class="bg-img" src="/img/bg.jpg" alt="bg">
   </div>
 </template>
 
@@ -86,6 +87,14 @@ export default {
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+.bg-img {
+  position: absolute;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .progress-overlay {

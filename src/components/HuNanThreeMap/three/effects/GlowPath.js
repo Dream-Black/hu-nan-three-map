@@ -7,8 +7,6 @@ export class GlowPath {
     this.pathMesh = pathMesh;
 
     this.flowMesh = null;
-
-    // 1. 根据排序后的点创建平滑曲线
     this.curve = new THREE.CatmullRomCurve3(this.points, true);
 
     this.initPath();
@@ -18,7 +16,7 @@ export class GlowPath {
   initPath() {
     this.pathMesh.material.dispose()
     const material = new THREE.LineBasicMaterial({ 
-      color: 0x00ffff, 
+      color: 0x8DC4F2,
     });
     this.pathMesh.material = material;
   }
@@ -29,7 +27,7 @@ export class GlowPath {
     this.flowMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uColor: { value: new THREE.Color(0x21FFED) },
+        uColor: { value: new THREE.Color(0x8DC4F2) },
         uFlowSpeed: { value: 0.25 },
         uFlowLength: { value: 0.1 },
       },
@@ -59,7 +57,7 @@ export class GlowPath {
             float finalAlpha = mask * glow * breathe;
             gl_FragColor = vec4(uColor, finalAlpha);
         }
-    `,
+     `,
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
