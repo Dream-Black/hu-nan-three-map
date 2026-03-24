@@ -5,6 +5,7 @@ import { createGround, createShadowGround } from './Ground';
 import { GlowPath } from './effects';
 import { MarkerManager } from './markers/MarkerManager';
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
+import { CityManager } from './city'
 
 export default class ThreeManager {
   constructor(container, modelLoader) {
@@ -18,6 +19,7 @@ export default class ThreeManager {
     this.shadowGround = null;
     this.pathMesh = null;
     this.glowPath = null;
+    this.cityManager = null;
   }
 
   async init(){
@@ -28,7 +30,13 @@ export default class ThreeManager {
     this.initControls();
     // this.initGround();
     await this.initMarkerManager();
+    await this.initCity();
     this.animate();
+  }
+
+  async initCity() {
+    this.cityManager = new CityManager(this.scene);
+    await this.cityManager.init();
   }
 
   initGlowPath() {
@@ -86,7 +94,7 @@ export default class ThreeManager {
   initCamera() {
     const aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-    this.camera.position.set(0, 8, 15);
+    this.camera.position.set(0, 12, 15);
     this.camera.lookAt(0, 0, 0);
   }
 
@@ -166,6 +174,7 @@ export default class ThreeManager {
           this.pathMesh = mesh;
         }
       });
+      model.rotateY(-Math.PI / 2);
 
       this.initHandle();
       this.initGlowPath();

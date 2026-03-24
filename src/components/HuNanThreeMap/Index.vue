@@ -62,8 +62,11 @@ export default {
       this.progressPercent = `${((xhr.loaded / 20332800) * 100).toFixed(0)}%`;
       this.progressText = `已加载: ${this.progressPercent}`;
       if (this.progressPercent === '100%') {
-        this.loading = false;
+        this.progressText = `编译着色器中...`
       }
+    }).then( async () => {
+      await this.manager.renderer.compileAsync(this.manager.scene, this.manager.camera);
+      this.loading = false;
     });
 
     window.addEventListener('resize', this.handleResize);
@@ -104,7 +107,9 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.85);
+backdrop-filter: blur(8px) brightness(0.8);
+  -webkit-backdrop-filter: blur(8px) brightness(0.8);
   display: flex;
   justify-content: center;
   align-items: center;
