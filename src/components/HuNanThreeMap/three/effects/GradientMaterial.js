@@ -11,9 +11,9 @@ export function createGradientMaterial(yMin, yMax){
     uniforms: {
       yMin: { value: yMin },
       yMax: { value: yMax },
-      colorTop: { value: new THREE.Color(0x093C7A) },
-      colorMiddle: { value: new THREE.Color(0x062245) },
-      colorBottom: { value: new THREE.Color(0x36A1F7) },
+      colorTop: { value: new THREE.Color(0x000000) },
+      colorMiddle: { value: new THREE.Color(0x0084F0) },
+      colorBottom: { value: new THREE.Color(0xB2D8F7) },
     },
     vertexShader: `
       varying float vY;
@@ -33,7 +33,7 @@ export function createGradientMaterial(yMin, yMax){
       void main() {
         float t = (vY - yMin) / (yMax - yMin);
         t = clamp(t, 0.0, 1.0);
-        
+
         vec3 finalColor;
         if (t < 0.5) {
           float s = t * 2.0;
@@ -42,10 +42,18 @@ export function createGradientMaterial(yMin, yMax){
           float s = (t - 0.5) * 2.0;
           finalColor = mix(colorMiddle, colorTop, s);
         }
-        
+
         gl_FragColor = vec4(finalColor, 1.0);
       }
     `,
-    side: THREE.DoubleSide 
+    side: THREE.DoubleSide,
+    depthWrite: true,
+    depthTest: true,
+    // 不受后处理辉光影响，不添加到 Layer 1
+    // 使用 NormalBlending 确保正常混合
+    blending: THREE.NormalBlending,
+    transparent: false,
+    // 确保不受光照影响（ShaderMaterial 默认就不受光照影响）
+    lights: false
   })
 }

@@ -24,45 +24,45 @@ const fragmentShaderNeon = `
   uniform float uTime;
   uniform vec3 uColor;
   uniform float uIntensity;
-  
+
   varying vec2 vUv;
   varying vec3 vPosition;
   varying vec3 vNormal;
-  
+
   void main() {
     float threshold = 0.5;
     if (abs(vNormal.z) < threshold) {
-      vec3 sideColor = vec3(0.05, 0.1, 0.2);
+      vec3 sideColor = vec3(0.2, 0.15, 0.05);
       gl_FragColor = vec4(sideColor, 1.0);
       return;
     }
-    
+
     vec3 neonColors[3];
-    neonColors[0] = vec3(0.2, 0.5, 1.0);
-    neonColors[1] = vec3(0.3, 0.7, 1.0);
-    neonColors[2] = vec3(0.5, 0.9, 1.0);
-    
+    neonColors[0] = vec3(1.0, 0.8, 0.0);  // 金黄色
+    neonColors[1] = vec3(1.0, 0.9, 0.2);  // 亮黄色
+    neonColors[2] = vec3(1.0, 1.0, 0.4);  // 淡黄色
+
     float colorShift = sin(uTime * 1.5) * 0.5 + 0.5;
     vec3 baseColor = mix(neonColors[0], neonColors[2], colorShift);
-    
+
     float edgeX = min(vUv.x, 1.0 - vUv.x);
     float edgeY = min(vUv.y, 1.0 - vUv.y);
     float edgeIntensity = min(edgeX, edgeY);
-    
+
     float coreGlow = pow(1.0 - edgeIntensity, 1.5);
-    
+
     float halo = 0.0;
     if (edgeIntensity < 0.1) {
       halo = (0.1 - edgeIntensity) * 5.0;
     }
-    
+
     float pulse = 0.6 + sin(uTime * 4.0) * 0.3;
     float glowIntensity = (coreGlow * 0.8 + halo * 1.2) * pulse * uIntensity;
-    
-    vec3 finalColor = baseColor + vec3(0.6, 0.8, 1.0) * glowIntensity;
+
+    vec3 finalColor = baseColor + vec3(1.0, 0.9, 0.5) * glowIntensity;
     float scanLine = sin(vUv.y * 200.0 + uTime * 20.0) * 0.1 + 0.9;
     finalColor *= scanLine;
-    
+
     gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
@@ -89,7 +89,7 @@ export class CityManager {
     this.sharedMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uColor: { value: new THREE.Color(0x33aaff) },
+        uColor: { value: new THREE.Color(0xFFC300) },
         uIntensity: { value: 1.2 },
       },
       vertexShader: vertexShaderNeon,

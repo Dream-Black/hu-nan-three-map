@@ -24,7 +24,7 @@ export class GlowPath {
     this.baseGlowMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uColor: { value: new THREE.Color(0x8DC4F2) },
-        uIntensity: { value: 0.5 },
+        uIntensity: { value: 0.25 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -41,7 +41,7 @@ export class GlowPath {
         void main() {
           // 边缘淡出效果
           float edgeMask = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 1.5);
-          gl_FragColor = vec4(uColor * uIntensity, edgeMask * 0.2);
+          gl_FragColor = vec4(uColor * uIntensity, edgeMask * 0.1);
         }
       `,
       transparent: true,
@@ -94,7 +94,7 @@ export class GlowPath {
           // 边缘淡出
           float edgeMask = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 2.0);
 
-          gl_FragColor = vec4(uColor * 1.5, highlight * edgeMask);
+          gl_FragColor = vec4(uColor * 0.8, highlight * edgeMask);
         }
       `,
       transparent: true,

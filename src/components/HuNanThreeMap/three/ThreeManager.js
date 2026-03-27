@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 
 import * as Handle from './handle';
-import { createGround, createShadowGround } from './Ground';
+import { createShadowOnlyGround } from './Ground';
 import { GlowPath, groundOverlayMaterial, RippleManager } from './effects';
 import { MarkerManager } from './markers/MarkerManager';
 import { CityManager } from './city';
@@ -52,6 +52,7 @@ export default class ThreeManager {
     this.initClickManager();
     await this.initMarkerManager();
     await this.initCity();
+    this.initGround();
     this.animate();
   }
 
@@ -97,12 +98,13 @@ export default class ThreeManager {
    * 创建地面(反射、阴影)
    */
   initGround() {
-    this.shadowGround = createShadowGround();
+    // 使用 ShadowMaterial 地面 - 只显示阴影，完全透明
+    this.shadowGround = createShadowOnlyGround({
+      radius: 30,
+      shadowOpacity: 0.25
+    });
+    this.shadowGround.position.y = 0;
     this.scene.add(this.shadowGround);
-
-    this.ground = createGround();
-    this.ground.position.y = -0.01;
-    this.scene.add(this.ground);
   }
 
   initHandle() {
@@ -164,7 +166,7 @@ export default class ThreeManager {
     bloomRenderPass.layerMask = this.bloomLayer.mask;
     this.bloomComposer.addPass(bloomRenderPass);
 
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.6, 0.3, 0.1);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.4, 0.2, 0.1);
     this.bloomComposer.addPass(bloomPass);
 
     // --- 2. 常规合成器 (渲染全部，但会混合辉光结果) ---
@@ -311,7 +313,7 @@ export default class ThreeManager {
 
     // --- 分层渲染流程 ---
 
-    // 1. 渲染辉光效果（只渲染 Layer 1）
+    // 1. 先渲染辉光效果（只渲染 Layer 1）
     this.camera.layers.set(1);
     this.bloomComposer.render();
 
