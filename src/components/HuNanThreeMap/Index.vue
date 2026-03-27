@@ -55,8 +55,8 @@ export default {
     await this.manager.init()
 
     this.manager.loadModel(this.modelUrl, (xhr) => {
-      // console.log(xhr.loaded)
-      this.progressPercent = `${((xhr.loaded / 20332800) * 100).toFixed(0)}%`;
+      // console.log('loaded: ', xhr.loaded)
+      this.progressPercent = `${((xhr.loaded / 22039660) * 100).toFixed(0)}%`;
       this.progressText = `已加载: ${this.progressPercent}`;
       if (this.progressPercent === '100%') {
         this.progressText = `编译着色器中...`

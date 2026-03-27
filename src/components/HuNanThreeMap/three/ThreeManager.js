@@ -6,6 +6,7 @@ import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 
 import * as Handle from './handle';
 import { createGround, createShadowGround } from './Ground';
@@ -32,10 +33,14 @@ export default class ThreeManager {
     this.clickManager = null;
     this.overlay = {};
     this.rippleManager = null;
-    
+
     // 分层渲染所需变量
     this.composer = null;
     this.bloomComposer = null;
+    this.bloomLayer = null;
+
+    // 最终混合通道
+    this.finalPass = null;
   }
 
   async init() {
@@ -135,7 +140,6 @@ export default class ThreeManager {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.autoClear = false;
     this.container.appendChild(this.renderer.domElement);
 
     this.renderer.shadowMap.enabled = true;
@@ -147,26 +151,64 @@ export default class ThreeManager {
     this.labelRenderer.domElement.style.top = '0px';
     this.labelRenderer.domElement.style.pointerEvents = 'none';
     this.container.appendChild(this.labelRenderer.domElement);
-    
-    // --- 1. 常规合成器 (渲染 Layer 0 + 1) ---
+
+    // 创建 Layer 1（辉光层）
+    this.bloomLayer = new THREE.Layers();
+    this.bloomLayer.set(1);
+
+    // --- 1. 辉光合成器 (只渲染 Layer 1) ---
+    this.bloomComposer = new EffectComposer(this.renderer);
+    this.bloomComposer.renderToScreen = false;
+
+    const bloomRenderPass = new RenderPass(this.scene, this.camera);
+    bloomRenderPass.layerMask = this.bloomLayer.mask;
+    this.bloomComposer.addPass(bloomRenderPass);
+
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.6, 0.3, 0.1);
+    this.bloomComposer.addPass(bloomPass);
+
+    // --- 2. 常规合成器 (渲染全部，但会混合辉光结果) ---
     this.composer = new EffectComposer(this.renderer);
     const renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(renderPass);
 
     this.outlinePass = new OutlinePass(new THREE.Vector2(width, height), this.scene, this.camera);
-    this.outlinePass.edgeStrength = 5.0; 
+    this.outlinePass.edgeStrength = 5.0;
     this.outlinePass.edgeThickness = 2.0;
     this.outlinePass.visibleEdgeColor.set('#ffffff');
     this.composer.addPass(this.outlinePass);
+
+    // 添加最终混合通道，将辉光结果叠加到主场景
+    const finalPassMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        baseTexture: { value: null },
+        bloomTexture: { value: this.bloomComposer.renderTarget2.texture }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D baseTexture;
+        uniform sampler2D bloomTexture;
+        varying vec2 vUv;
+        void main() {
+          vec4 base = texture2D(baseTexture, vUv);
+          vec4 bloom = texture2D(bloomTexture, vUv);
+          gl_FragColor = base + bloom;
+        }
+      `,
+      defines: {}
+    });
+
+    this.finalPass = new ShaderPass(finalPassMaterial, 'baseTexture');
+    this.finalPass.needsSwap = true;
+    this.composer.addPass(this.finalPass);
+
     this.composer.addPass(new OutputPass());
-
-    // --- 2. 辉光合成器 (只渲染 Layer 1) ---
-    this.bloomComposer = new EffectComposer(this.renderer);
-    this.bloomComposer.renderToScreen = false; // 结果存在内存里供后续混合
-    this.bloomComposer.addPass(renderPass);
-
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 1.5, 0.4, 0.1);
-    this.bloomComposer.addPass(bloomPass);
   }
 
   setMarkers(markersData) {
@@ -258,7 +300,7 @@ export default class ThreeManager {
   animate(time) {
     requestAnimationFrame(time => this.animate(time));
     const seconds = time / 1000;
-  
+
     if (this.clickManager) this.clickManager.update(seconds);
     if (this.controls) this.controls.update();
     if (this.glowPath) this.glowPath.update();
@@ -266,23 +308,19 @@ export default class ThreeManager {
     if (groundOverlayMaterial.uniforms?.uTime) {
       groundOverlayMaterial.uniforms.uTime.value = seconds;
     }
-  
-    // --- 修正后的分层渲染流程 ---
-    
-    // 1. 先渲染辉光效果到 bloomComposer 的缓存中
-    // 这一步只会提取 Layer 1 的物体进行模糊处理
-    this.renderer.autoClear = true; 
-    this.camera.layers.set(1); 
+
+    // --- 分层渲染流程 ---
+
+    // 1. 渲染辉光效果（只渲染 Layer 1）
+    this.camera.layers.set(1);
     this.bloomComposer.render();
-  
-    // 2. 渲染主场景
-    this.renderer.autoClear = false; // 关键：不要清除刚才 bloomComposer 产生的内容（如果要在同一画布叠加）
-    this.renderer.clearDepth();     // 但要清除深度，防止遮挡
-    
-    this.camera.layers.set(0);      // 恢复相机看到层级 0
-    this.camera.layers.enable(1);   // 同时也看到层级 1 (保证物体本身可见)
-    this.composer.render();         // 渲染最终合成器
-  
+
+    // 2. 渲染主场景（渲染全部层级）
+    this.camera.layers.set(0);
+    this.camera.layers.enable(1);
+    this.composer.render();
+
+    // 3. 渲染标签
     if (this.labelRenderer) this.labelRenderer.render(this.scene, this.camera);
   }
 
