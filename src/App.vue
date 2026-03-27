@@ -27,10 +27,10 @@ export default {
         { position: { x: 2, y: 0.5, z: -1 }, html: '<div style="color:yellow;">铁塔B</div>', type: '信号塔', name: '铁塔B', enableRipple: true },
         { position: { x: -3, y: 0.5, z: 1 }, html: '<div>铁塔C</div>', type: '信号塔', name: '铁塔C', enableRipple: true },
         { position: { x: 0, y: 0.5, z: 1.5 }, html: '<div>铁塔D</div>', type: '信号塔', name: '铁塔D', enableRipple: true },
-        { position: { x: 3, y: 2, z: -3 }, html: '<div>卫星A</div>', type: '卫星', name: '卫星A', enableRipple: false },
+        { position: { x: 3, y: 2, z: -3 }, html: '<div>卫星A</div>', type: '卫星', name: '卫星A', enableRipple: true },
         { position: { x: 0, y: 2.5, z: 4 }, html: '<div>卫星B</div>', type: '卫星', name: '卫星B', enableRipple: false },
         { position: { x: -2, y: 2, z: 0 }, html: '<div>卫星C</div>', type: '卫星', name: '卫星C', enableRipple: false },
-        { position: { x: -4, y: 2.5, z: 1 }, html: '<div>无人机A</div>', type: '无人机', name: '无人机A', enableRipple: false },
+        { position: { x: -4, y: 2.5, z: 1 }, html: '<div>无人机A</div>', type: '无人机', name: '无人机A', enableRipple: true },
         { position: { x: 4, y: 2, z: 2 }, html: '<div>无人机B</div>', type: '无人机', name: '无人机B', enableRipple: false },
       ],
     };

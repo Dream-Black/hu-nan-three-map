@@ -1,5 +1,6 @@
 import Marker from './Marker';
 import * as THREE from 'three';
+import { SustainedTyndallBeam } from '../effects/TyndallBeam';
 
 export class MarkerManager {
   constructor(scene, labelRenderer, rippleManager = null) {
@@ -8,6 +9,7 @@ export class MarkerManager {
     this.rippleManager = rippleManager;
     this.markers = [];
     this.markerRipples = new Map();
+    this.markerBeams = new Map();
     this.textureMap = {
       '信号塔': null,
       '无人机': null,
@@ -66,6 +68,23 @@ export class MarkerManager {
           true
         );
         this.markerRipples.set(marker, ripple);
+
+        // 为卫星和无人机添加丁达尔光束
+        if (data.type === '卫星' || data.type === '无人机') {
+          const beam = new SustainedTyndallBeam(
+            this.scene,
+            () => marker.getObject().position,
+            {
+              color: new THREE.Color(0x88ccff),
+              intensity: 0.5,
+              height: data.type === '卫星' ? 4.0 : 2.5,
+              topRadius: 0.15,
+              bottomRadius: data.type === '卫星' ? 1.2 : 0.8
+            }
+          );
+          beam.start();
+          this.markerBeams.set(marker, beam);
+        }
       }
     });
   }
@@ -77,6 +96,11 @@ export class MarkerManager {
       }
     });
     this.markerRipples.clear();
+
+    this.markerBeams.forEach((beam) => {
+      beam.dispose();
+    });
+    this.markerBeams.clear();
 
     this.markers.forEach(marker => {
       marker.dispose();
@@ -105,6 +129,10 @@ export class MarkerManager {
 
     this.markers.forEach(marker => {
       marker.update(time);
+    });
+
+    this.markerBeams.forEach((beam) => {
+      beam.update(time);
     });
   }
 }
