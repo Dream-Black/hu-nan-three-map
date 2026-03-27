@@ -2,15 +2,21 @@ import Marker from './Marker';
 import * as THREE from 'three';
 
 export class MarkerManager {
-  constructor(scene, labelRenderer) {
+  constructor(scene, labelRenderer, rippleManager = null) {
     this.scene = scene;
     this.labelRenderer = labelRenderer;
+    this.rippleManager = rippleManager;
     this.markers = [];
+    this.markerRipples = new Map();
     this.textureMap = {
       '信号塔': null,
       '无人机': null,
       '卫星': null
     };
+  }
+
+  setRippleManager(rippleManager) {
+    this.rippleManager = rippleManager;
   }
 
   /**
@@ -46,16 +52,32 @@ export class MarkerManager {
         data.html,
         {
           type: data.type,
-          name: data.name
+          name: data.name,
+          enableRipple: data.enableRipple || false
         },
         this.textureMap[data.type]
       );
       this.markers.push(marker);
       this.scene.add(marker.getObject());
+
+      if (data.enableRipple && this.rippleManager) {
+        const ripple = this.rippleManager.addRipple(
+          new THREE.Vector3(data.position.x, data.position.y, data.position.z),
+          true
+        );
+        this.markerRipples.set(marker, ripple);
+      }
     });
   }
 
   clear() {
+    this.markerRipples.forEach((ripple) => {
+      if (this.rippleManager) {
+        this.rippleManager.removeRipple(ripple);
+      }
+    });
+    this.markerRipples.clear();
+
     this.markers.forEach(marker => {
       marker.dispose();
       const group = marker.getObject();
@@ -77,6 +99,8 @@ export class MarkerManager {
   }
 
   update() {
-    
+    if (this.rippleManager) {
+      this.rippleManager.update();
+    }
   }
 }

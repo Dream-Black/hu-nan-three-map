@@ -54,10 +54,6 @@ export default {
     this.manager = new ThreeManager(this.$refs.container, modelLoader, this);
     await this.manager.init()
 
-    if (this.markers) {
-      this.manager.setMarkers(this.markers);
-    }
-
     this.manager.loadModel(this.modelUrl, (xhr) => {
       // console.log(xhr.loaded)
       this.progressPercent = `${((xhr.loaded / 20332800) * 100).toFixed(0)}%`;
@@ -68,6 +64,10 @@ export default {
     }).then( async () => {
       await this.manager.renderer.compileAsync(this.manager.scene, this.manager.camera);
       this.loading = false;
+      
+      if (this.markers) {
+        this.manager.setMarkers(this.markers);
+      }
     });
 
     window.addEventListener('resize', this.handleResize);

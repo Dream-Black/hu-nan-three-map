@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 
 import * as Handle from './handle';
 import { createGround, createShadowGround } from './Ground';
-import { GlowPath, groundOverlayMaterial } from './effects';
+import { GlowPath, groundOverlayMaterial, RippleManager } from './effects';
 import { MarkerManager } from './markers/MarkerManager';
 import { CityManager } from './city';
 import { ClickManager } from './event/click';
@@ -31,6 +31,7 @@ export default class ThreeManager {
     this.cityManager = null;
     this.clickManager = null;
     this.overlay = {};
+    this.rippleManager = null;
     
     // 分层渲染所需变量
     this.composer = null;
@@ -174,7 +175,8 @@ export default class ThreeManager {
   }
 
   async initMarkerManager() {
-    this.markerManager = new MarkerManager(this.scene, this.labelRenderer);
+    this.rippleManager = new RippleManager(groundOverlayMaterial);
+    this.markerManager = new MarkerManager(this.scene, this.labelRenderer, this.rippleManager);
     await this.markerManager.loadTextures();
   }
 
@@ -247,6 +249,10 @@ export default class ThreeManager {
     if (this.clickManager) {
       this.clickManager.overlay = this.overlay;
     }
+
+    if (this.rippleManager) {
+      this.rippleManager.setOverlay(this.overlay);
+    }
   }
 
   animate(time) {
@@ -256,6 +262,7 @@ export default class ThreeManager {
     if (this.clickManager) this.clickManager.update(seconds);
     if (this.controls) this.controls.update();
     if (this.glowPath) this.glowPath.update();
+    if (this.markerManager) this.markerManager.update();
     if (groundOverlayMaterial.uniforms?.uTime) {
       groundOverlayMaterial.uniforms.uTime.value = seconds;
     }
@@ -304,6 +311,11 @@ export default class ThreeManager {
     if (this.clickManager) {
       this.clickManager.dispose();
       this.clickManager = null;
+    }
+
+    if (this.rippleManager) {
+      this.rippleManager.dispose();
+      this.rippleManager = null;
     }
 
     if (this.markerManager) {

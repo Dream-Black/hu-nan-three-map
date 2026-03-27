@@ -22,7 +22,8 @@ export default class Marker {
       type: '信号塔',
       height: 5,
       labelOffsetY: 0,
-      name: ''
+      name: '',
+      enableRipple: false
     }, options);
     this.texture = texture;
     this.label = null;
