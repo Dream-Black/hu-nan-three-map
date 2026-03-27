@@ -4,7 +4,8 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 import * as Handle from './handle';
 import { createGround, createShadowGround } from './Ground';
@@ -30,6 +31,10 @@ export default class ThreeManager {
     this.cityManager = null;
     this.clickManager = null;
     this.overlay = {};
+    
+    // 分层渲染所需变量
+    this.composer = null;
+    this.bloomComposer = null;
   }
 
   async init() {
@@ -39,7 +44,6 @@ export default class ThreeManager {
     this.initLights();
     this.initControls();
     this.initClickManager();
-    // this.initGround();
     await this.initMarkerManager();
     await this.initCity();
     this.animate();
@@ -80,34 +84,7 @@ export default class ThreeManager {
 
   initGlowPath() {
     if (!this.pathMesh) return;
-
-    this.pathMesh.updateMatrixWorld(true);
-    const points = [];
-    const posAttr = this.pathMesh.geometry.attributes.position;
-
-    for (let i = 0; i < posAttr.count; i++) {
-      const vec = new THREE.Vector3().fromBufferAttribute(posAttr, i);
-      vec.applyMatrix4(this.pathMesh.matrixWorld);
-      points.push(vec);
-    }
-
-    const sortedPoints = [points.shift()];
-    while (points.length > 0) {
-      let lastPoint = sortedPoints[sortedPoints.length - 1];
-      let closestIdx = 0;
-      let minDistance = Infinity;
-
-      for (let i = 0; i < points.length; i++) {
-        let dist = lastPoint.distanceTo(points[i]);
-        if (dist < minDistance) {
-          minDistance = dist;
-          closestIdx = i;
-        }
-      }
-      sortedPoints.push(points.splice(closestIdx, 1)[0]);
-    }
-
-    this.glowPath = new GlowPath(this.scene, sortedPoints, this.pathMesh);
+    this.glowPath = new GlowPath(this.scene, this.pathMesh);
   }
 
   /**
@@ -133,7 +110,7 @@ export default class ThreeManager {
   initCamera() {
     const aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-    this.camera.position.set(0, 12, 15);
+    this.camera.position.set(0, 5.5, 15);
     this.camera.lookAt(0, 0, 0);
   }
 
@@ -151,43 +128,44 @@ export default class ThreeManager {
   }
 
   initRenderer() {
+    const width = this.container.clientWidth;
+    const height = this.container.clientHeight;
+
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+    this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.autoClear = false; // 分层渲染必须设为 false
     this.container.appendChild(this.renderer.domElement);
 
-    // 启用阴影
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.labelRenderer = new CSS2DRenderer();
-    this.labelRenderer.setSize(this.container.clientWidth, this.container.clientHeight);
+    this.labelRenderer.setSize(width, height);
     this.labelRenderer.domElement.style.position = 'absolute';
     this.labelRenderer.domElement.style.top = '0px';
-    this.labelRenderer.domElement.style.left = '0px';
     this.labelRenderer.domElement.style.pointerEvents = 'none';
     this.container.appendChild(this.labelRenderer.domElement);
     
-    // 后处理
+    // --- 1. 常规合成器 (渲染 Layer 0 + 1) ---
     this.composer = new EffectComposer(this.renderer);
     const renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(renderPass);
 
-    // 初始化轮廓线
-    this.outlinePass = new OutlinePass(
-        new THREE.Vector2(this.container.clientWidth, this.container.clientHeight),
-        this.scene,
-        this.camera
-    );
-    // 轮廓线样式
+    this.outlinePass = new OutlinePass(new THREE.Vector2(width, height), this.scene, this.camera);
     this.outlinePass.edgeStrength = 5.0; 
-    this.outlinePass.edgeGlow = 1.0;     
     this.outlinePass.edgeThickness = 2.0;
     this.outlinePass.visibleEdgeColor.set('#ffffff');
     this.composer.addPass(this.outlinePass);
+    this.composer.addPass(new OutputPass());
 
-    const outputPass = new OutputPass();
-    this.composer.addPass(outputPass);
+    // --- 2. 辉光合成器 (只渲染 Layer 1) ---
+    this.bloomComposer = new EffectComposer(this.renderer);
+    this.bloomComposer.renderToScreen = false; // 结果存在内存里供后续混合
+    this.bloomComposer.addPass(renderPass);
+
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 1.5, 0.4, 0.1);
+    this.bloomComposer.addPass(bloomPass);
   }
 
   setMarkers(markersData) {
@@ -273,40 +251,43 @@ export default class ThreeManager {
 
   animate(time) {
     requestAnimationFrame(time => this.animate(time));
-
     const seconds = time / 1000;
+  
     if (this.clickManager) this.clickManager.update(seconds);
-    if (groundOverlayMaterial.uniforms.uTime) {
-      groundOverlayMaterial.uniforms.uTime.value = seconds;
-    }
-    
     if (this.controls) this.controls.update();
     if (this.glowPath) this.glowPath.update();
-    
-    
-    
-    if (this.composer) {
-      this.composer.render();
-    } else {
-      this.renderer.render(this.scene, this.camera);
+    if (groundOverlayMaterial.uniforms?.uTime) {
+      groundOverlayMaterial.uniforms.uTime.value = seconds;
     }
+  
+    // --- 修正后的分层渲染流程 ---
+    
+    // 1. 先渲染辉光效果到 bloomComposer 的缓存中
+    // 这一步只会提取 Layer 1 的物体进行模糊处理
+    this.renderer.autoClear = true; 
+    this.camera.layers.set(1); 
+    this.bloomComposer.render();
+  
+    // 2. 渲染主场景
+    this.renderer.autoClear = false; // 关键：不要清除刚才 bloomComposer 产生的内容（如果要在同一画布叠加）
+    this.renderer.clearDepth();     // 但要清除深度，防止遮挡
+    
+    this.camera.layers.set(0);      // 恢复相机看到层级 0
+    this.camera.layers.enable(1);   // 同时也看到层级 1 (保证物体本身可见)
+    this.composer.render();         // 渲染最终合成器
+  
     if (this.labelRenderer) this.labelRenderer.render(this.scene, this.camera);
   }
 
   resize() {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
-
     this.renderer.setSize(width, height);
     this.labelRenderer.setSize(width, height);
-    
-    // 必须更新 composer
-    if (this.composer) {
-      this.composer.setSize(width, height);
-    }
-
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    if (this.composer) this.composer.setSize(width, height);
+    if (this.bloomComposer) this.bloomComposer.setSize(width, height);
   }
 
   dispose() {

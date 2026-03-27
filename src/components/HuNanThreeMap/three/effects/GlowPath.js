@@ -1,72 +1,60 @@
 import * as THREE from 'three';
 
 export class GlowPath {
-  constructor(scene, points, pathMesh) {
+  constructor(scene, pathMesh) {
     this.scene = scene;
-    this.points = points;
     this.pathMesh = pathMesh;
-
     this.flowMesh = null;
-    this.curve = new THREE.CatmullRomCurve3(this.points, true);
-
-    this.initPath();
     this.initFlow();
   }
 
-  initPath() {
-    this.pathMesh.material.dispose()
-    const material = new THREE.LineBasicMaterial({ 
-      color: 0x8DC4F2,
-    });
-    this.pathMesh.material = material;
-  }
-
   initFlow() {
-    const tubeGeo = new THREE.TubeGeometry(this.curve, 512, 0.05, 8, true);
+    // 基础管道：放在默认 Layer 0
+    this.pathMesh.material = new THREE.MeshBasicMaterial({
+      color: 0x8DC4F2,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide
+    });
 
+    const flowGeo = this.pathMesh.geometry;
     this.flowMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
         uColor: { value: new THREE.Color(0x8DC4F2) },
-        uFlowSpeed: { value: 0.25 },
-        uFlowLength: { value: 0.1 },
+        uSpeed: { value: 0.8 },
       },
       vertexShader: `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          vec3 pos = position + normal * 0.01; 
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
       fragmentShader: `
         varying vec2 vUv;
         uniform float uTime;
         uniform vec3 uColor;
-        uniform float uFlowLength;
-        uniform float uFlowSpeed;
-
+        uniform float uSpeed;
         void main() {
-            float flow = mod(vUv.x - uTime * uFlowSpeed * 0.2, 1.0);
-            
-            float mask = smoothstep(uFlowLength, 0.0, distance(flow, 0.5));
-            
-            float glow = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 3.0);
-            
-            float breathe = sin(uTime * 2.0) * 0.1 + 0.9;
-
-            float finalAlpha = mask * glow * breathe;
-            gl_FragColor = vec4(uColor, finalAlpha);
+          float flow = fract(vUv.x * 3.0 - uTime * uSpeed);
+          float highlight = smoothstep(0.0, 0.1, flow) * smoothstep(0.7, 0.1, flow);
+          float edgeMask = pow(1.0 - abs(vUv.y - 0.5) * 2.0, 2.0);
+          gl_FragColor = vec4(uColor * 3.0, highlight * edgeMask);
         }
-     `,
+      `,
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      side: THREE.DoubleSide,
     });
 
-    this.flowMesh = new THREE.Mesh(tubeGeo, this.flowMaterial);
-
-    this.scene.add(this.flowMesh);
+    this.flowMesh = new THREE.Mesh(flowGeo, this.flowMaterial);
+    
+    // 关键：将流光 Mesh 放到第 1 层，专门供 Bloom 渲染
+    this.flowMesh.layers.set(1); 
+    
+    this.pathMesh.add(this.flowMesh);
   }
 
   update() {
@@ -75,15 +63,10 @@ export class GlowPath {
     }
   }
 
-  reverseDirection() {
-    this.flowMaterial.uniforms.uFlowSpeed.value *= -1;
-  }
-
   dispose() {
     if (this.flowMesh) {
-      this.scene.remove(this.flowMesh);
-      this.flowMesh.geometry.dispose();
-      this.flowMesh.material.dispose();
+      this.flowMaterial.dispose();
+      this.pathMesh.remove(this.flowMesh);
     }
   }
 }
