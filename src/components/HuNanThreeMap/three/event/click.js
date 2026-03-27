@@ -117,23 +117,23 @@ export class ClickManager {
 
     this.tweenGroup.removeAll(); 
 
-    const ratio = isIn ? 1.3 : 1.0;
+    const ratio = isIn ? 1.05 : 1.0;
     const targetScale = {
       x: originalScale.x * ratio,
       y: originalScale.y * ratio,
       z: originalScale.z
     };
 
-    const targetIntensity = isIn ? 2.0 : 1.0;
+    const targetIntensity = isIn ? 1.5 : 1.0;
 
     new Tween(sprite.scale, this.tweenGroup)
-      .to(targetScale, 300)
+      .to(targetScale, 500)
       .easing(Easing.Back.Out)
       .start();
 
     if (sprite.material.color) {
       new Tween(sprite.material.color, this.tweenGroup)
-        .to({ r: targetIntensity, g: targetIntensity, b: targetIntensity }, 300)
+        .to({ r: targetIntensity, g: targetIntensity, b: targetIntensity }, 500)
         .start();
     }
   }
@@ -213,7 +213,7 @@ export class ClickManager {
 
     const endCameraPos = {
       x: targetPos.x,
-      y: targetPos.y + 2,
+      y: targetPos.y + 0,
       z: targetPos.z + 2
     };
 

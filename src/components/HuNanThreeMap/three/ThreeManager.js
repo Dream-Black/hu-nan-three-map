@@ -110,7 +110,7 @@ export default class ThreeManager {
   initCamera() {
     const aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
-    this.camera.position.set(0, 5.5, 15);
+    this.camera.position.set(0, 3.5, 12);
     this.camera.lookAt(0, 0, 0);
   }
 
@@ -134,7 +134,7 @@ export default class ThreeManager {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.autoClear = false; // 分层渲染必须设为 false
+    this.renderer.autoClear = false;
     this.container.appendChild(this.renderer.domElement);
 
     this.renderer.shadowMap.enabled = true;

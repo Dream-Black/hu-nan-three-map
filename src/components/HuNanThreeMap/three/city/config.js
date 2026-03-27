@@ -49,7 +49,7 @@ const transformOptions = {
   scaleZ: -2.5,       // 纬度缩放系数
   offsetX: 0.45,      // X轴偏移
   offsetZ: -1.4,      // Z轴偏移
-  yBase: 1            // Y轴固定高度
+  yBase: 0.5            // Y轴固定高度
 };
 
 export const citiesConfig = hunanCities.map(city => ({

@@ -10,7 +10,8 @@
     <div v-if="error" class="error-overlay">
       <div class="error-message">加载失败: {{ error }}</div>
     </div>
-    <img class="bg-img" src="/img/bg.jpg" alt="bg">
+    <img class="bg-img" src="/img/bg1.jpg" alt="bg">
+    <!-- <img class="bg-img" src="/img/bg1.png" alt="bg"> -->
   </div>
 </template>
 

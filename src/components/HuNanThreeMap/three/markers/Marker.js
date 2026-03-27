@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 const TextureScaleConfig = {
-  '信号塔': [0.8, 3.4, 1],
-  '无人机': [1.6, 1, 1],
-  '卫星': [3, 1.5, 1]
+  '信号塔': [0.36, 1.8, 1],
+  '无人机': [1.2, 0.7, 1],
+  '卫星': [2, 0.8, 1]
 }
 
 /**
