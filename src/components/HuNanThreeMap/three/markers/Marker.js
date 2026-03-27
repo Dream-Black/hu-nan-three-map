@@ -31,8 +31,42 @@ export default class Marker {
     this.group = new THREE.Group();
     this.group.position.copy(this.position);
 
+    // 飞行动画参数
+    this.flightAnimation = null;
+    if (this.options.type === '卫星' || this.options.type === '无人机') {
+      this.initFlightAnimation();
+    }
+
     this.createSprite();
     this.createLabel();
+  }
+
+  initFlightAnimation() {
+    // 随机生成动画参数，使不同marker动画错开
+    const randomPhase = Math.random() * Math.PI * 2;
+    const randomSpeed = 0.5 + Math.random() * 0.5; // 0.5 - 1.0
+    const randomAmplitude = 0.05 + Math.random() * 0.1; // 0.05 - 0.15
+
+    this.flightAnimation = {
+      phase: randomPhase,
+      speed: randomSpeed,
+      amplitude: randomAmplitude,
+      baseY: this.position.y
+    };
+  }
+
+  update(time) {
+    // 更新扩散波
+    if (this.rippleEffect && this.options.enableRipple) {
+      this.rippleEffect.update(time);
+    }
+
+    // 更新飞行动画
+    if (this.flightAnimation) {
+      const { phase, speed, amplitude, baseY } = this.flightAnimation;
+      const offsetY = Math.sin(time * speed + phase) * amplitude;
+      this.group.position.y = baseY + offsetY;
+    }
   }
 
   getObject(){

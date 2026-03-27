@@ -98,9 +98,13 @@ export class MarkerManager {
     }
   }
 
-  update() {
+  update(time) {
     if (this.rippleManager) {
       this.rippleManager.update();
     }
+
+    this.markers.forEach(marker => {
+      marker.update(time);
+    });
   }
 }

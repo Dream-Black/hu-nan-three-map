@@ -262,7 +262,7 @@ export default class ThreeManager {
     if (this.clickManager) this.clickManager.update(seconds);
     if (this.controls) this.controls.update();
     if (this.glowPath) this.glowPath.update();
-    if (this.markerManager) this.markerManager.update();
+    if (this.markerManager) this.markerManager.update(seconds);
     if (groundOverlayMaterial.uniforms?.uTime) {
       groundOverlayMaterial.uniforms.uTime.value = seconds;
     }
